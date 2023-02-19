@@ -65,18 +65,15 @@ class TAN(BaseModel):
         self.text_embedding_dropout = nn.Dropout(config.hidden_dropout_prob)
         self.visual_embedding_LayerNorm = BertLayerNorm(config.hidden_size, eps=1e-12)
         self.visual_embedding_dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.postion_encoding = pos_embedding(194,config.hidden_size)
+        # self.postion_encoding = pos_embedding(194,config.hidden_size) # for tacos
+        self.postion_encoding = PositionalEncoding(config.hidden_size, n_position=116) # for activity net
 
-        #iou mask map
-        self.iou_mask_map = torch.zeros(129,129).float()
-        for i in range(0,128,1):
-          self.iou_mask_map[i,1+i:min(i+17,129)] = 1.
-        for i in range(0,128-16,2):
-          self.iou_mask_map[i,range(18+i,min(33+i,129),2)] = 1.
-        for i in range(0,128-32,4):
-          self.iou_mask_map[i,range(36+i,min(65+i,129),4)] = 1.
-        for i in range(0,128-64,8):
-          self.iou_mask_map[i,range(72+i,129,8)] = 1.
+        #iou mask map for activity net
+        iou_mask_map = torch.zeros(33,33).float()
+        for i in range(0,32,1):
+            iou_mask_map[i,i+1:min(i+17,33)] = 1.
+        for i in range(0,32-16,2):
+            iou_mask_map[i,range(18+i,33,2)] = 1.
 
         # transformer layer
         self.tblock1 = TransformerBlock(config)
