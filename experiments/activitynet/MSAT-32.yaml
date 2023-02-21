@@ -15,7 +15,7 @@ DATASET:
   RANDOM_SAMPLING: False
 
 TEST:
-  BATCH_SIZE: 4
+  BATCH_SIZE: 58
   RECALL: 1,5
   TIOU: 0.3,0.5,0.7
   EVAL_TRAIN: False
@@ -27,7 +27,7 @@ CUDNN:
   BENCHMARK: True
 
 TRAIN:
-  BATCH_SIZE: 1
+  BATCH_SIZE: 16
   LR: 0.0001
   WEIGHT_DECAY: 0.0000
   MAX_EPOCH: 100
@@ -43,23 +43,18 @@ LOSS:
 
 TAN:
 
-  FRAME_MODULE:
-    NAME: FrameAvgPool
-    PARAMS:
-      INPUT_SIZE: 500
-      HIDDEN_SIZE: 512
-      KERNEL_SIZE: 8
-      STRIDE: 8
-
   VLBERT_MODULE:
     NAME: TLocVLBERT
     PARAMS:
+      visual_embedding_size: 500
+      text_embedding_size: 300
+      
       object_word_embed_mode: 2
       input_transform_type: 1
       visual_size: 500
       hidden_size: 512
-      num_hidden_layers: 6
-      num_attention_heads: 16
+      num_hidden_layers: 5
+      num_attention_heads: 4
       intermediate_size: 512
       hidden_act: "gelu"
       hidden_dropout_prob: 0.1
@@ -86,4 +81,4 @@ TAN:
 
 MODEL:
   NAME: TAN
-  CHECKPOINT: ./checkpoints/TACoS/TAN_c3d/iter003055-0.2909-0.5466.pkl
+  CHECKPOINT: ./checkpoints/ActivityNet/TAN_c3d/iter003059-0.5730-0.8326.pkl

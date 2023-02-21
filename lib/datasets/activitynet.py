@@ -47,9 +47,14 @@ class ActivityNet(data.Dataset):
             annotations = json.load(f)
         anno_pairs = []
         max_sent_len = 0
+        i = 0
+        print(split, "file contains")
+
         for vid, video_anno in annotations.items():
             duration = video_anno['duration']
+            
             for timestamp, sentence in zip(video_anno['timestamps'], video_anno['sentences']):
+                i += len(list(zip(video_anno['timestamps'], video_anno['sentences'])))
                 if timestamp[0] < timestamp[1]:
                     sentence = sentence.replace(',',' ').replace('/',' ').replace('\"',' ').replace('-',' ').replace(';',' ').replace('.',' ').replace('&',' ').replace('?',' ').replace('!',' ').replace('(',' ').replace(')',' ')
                     anno_pairs.append(
@@ -69,7 +74,8 @@ class ActivityNet(data.Dataset):
                     #         self.ston[w.lower()] = 1
                     #     else:
                     #         self.ston[w.lower()] += 1
-
+        print(i)
+        print(len(anno_pairs))
         self.annotations = anno_pairs
         print('max_sent_len', max_sent_len)
 
@@ -169,9 +175,11 @@ class ActivityNet(data.Dataset):
         return item
 
     def __len__(self):
+
         return len(self.annotations)
 
     def get_video_features(self, vid):
+
         assert config.DATASET.VIS_INPUT_TYPE == 'c3d'
         with h5py.File(os.path.join(self.data_dir, 'sub_activitynet_v1-3.c3d.hdf5'), 'r') as f:
             features = torch.from_numpy(f[vid]['c3d_features'][:])

@@ -2,7 +2,7 @@ import json
 import argparse
 import numpy as np
 from terminaltables import AsciiTable
-
+import wandb
 from core.config import config, update_config
 
 def iou(pred, gt): # require pred and gt is numpy
@@ -86,6 +86,13 @@ def display_results(eval_result, miou, title=None):
     miou = miou*100
     display_data.append(['{:.02f}'.format(eval_result[j][i]) for i in range(len(recalls)) for j in range(len(tious))]
                         +['{:.02f}'.format(miou)])
+    if title == 'performance on validation set':
+        split = 'val'
+    elif title == 'performance on testing set':
+        split = 'test'
+    else:
+        split = 'train'
+    wandb.log({split+'mIoU': miou, split+'Rank@1,mIou@0.3':  eval_result[0][0], split+'Rank@1,mIou@0.5': eval_result[1][0], split+'Rank@1,mIou@0.7': eval_result[2][0], split+'Rank@5,mIou@0.3': eval_result[0][1], split+'Rank@5,mIou@0.5': eval_result[1][1], split+'Rank@5,mIou@0.7': eval_result[2][1]})
     table = AsciiTable(display_data, title)
     for i in range(len(tious)*len(recalls)):
         table.justify_columns[i] = 'center'
