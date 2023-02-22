@@ -53,8 +53,8 @@ TAN:
       input_transform_type: 1
       visual_size: 500
       hidden_size: 512
-      num_hidden_layers: 5
-      num_attention_heads: 4
+      num_hidden_layers: 6
+      num_attention_heads: 16
       intermediate_size: 512
       hidden_act: "gelu"
       hidden_dropout_prob: 0.1

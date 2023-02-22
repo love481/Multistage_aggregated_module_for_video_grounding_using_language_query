@@ -93,13 +93,20 @@ class ActivityNet(data.Dataset):
         gt_s_time, gt_e_time = self.annotations[index]['times']
         sentence = self.annotations[index]['description']
         duration = self.annotations[index]['duration']
-
+        words = [w.lower() for w in sentence.split()]
         word_label = [self.stoi.get(w.lower(), 10727) for w in sentence.split()]
         range_i = range(len(word_label))
         # if np.random.uniform(0,1)<0.8:
-        word_mask = [1. if np.random.uniform(0,1)<0.15 else 0. for _ in range_i]
+        # get english stop words
+        stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself', 'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'is', 'does', 'doing', 'having', '', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't", 'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn', "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't", 'wouldn', "wouldn't"]
+        word_mask = [1. if np.random.uniform(0,1)<0.15 and words[pp] not in stopwords else 0. for pp in range_i]
         if np.sum(word_mask) == 0.:
+            # select one index which is not in stop words randomly
             mask_i = np.random.choice(range_i)
+            for i in range(len(word_mask)):
+                if words[i] not in stopwords:
+                    mask_i = i
+                    break
             word_mask[mask_i] = 1.
         if np.sum(word_mask) == len(word_mask):
             unmask_i = np.random.choice(range_i)
