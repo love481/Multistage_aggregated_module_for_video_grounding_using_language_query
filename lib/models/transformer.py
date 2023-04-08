@@ -58,7 +58,7 @@ class SelfAttention(nn.Module):
         values_v_l = self.tovalues_v_l(feats).view(b, t1, h, e).transpose(1,2).contiguous().view(b*h, t1, e)/ (e ** (1/4))
 
         queries_l_l = self.toqueries_l_l(inps).view(b, t2, h, e).transpose(1,2).contiguous().view(b*h, t2, e)/ (e ** (1/4))
-        keys_l_l = self.tokeys_l_l(inps).view(b, t2, h, e).transpose(1,2).contiguous().view(b*h, t2, e)
+        keys_l_l = self.tokeys_l_l(inps).view(b, t2, h, e).transpose(1,2).contiguous().view(b*h, t2, e)/ (e ** (1/4))
         values_l_l = self.tovalues_l_l(inps).view(b, t2, h, e).transpose(1,2).contiguous().view(b*h, t2, e)/ (e ** (1/4))
         
         #compute scaled dot-product self-attention
