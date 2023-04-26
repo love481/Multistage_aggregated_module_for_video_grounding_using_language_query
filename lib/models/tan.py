@@ -29,6 +29,7 @@ class PositionalEncoding(nn.Module):
         return torch.FloatTensor(sinusoid_table).unsqueeze(0)
     def forward(self, x):
         return x + self.pos_table[:, :x.size(1)].clone().detach()
+
 #used for the initialization of weight parameters, good to manually initialize the network
 class BaseModel(nn.Module):
     def __init__(self, **kwargs):
