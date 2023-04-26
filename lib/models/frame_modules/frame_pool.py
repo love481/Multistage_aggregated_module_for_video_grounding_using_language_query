@@ -5,8 +5,8 @@ class FrameAvgPool(nn.Module):
 
     def __init__(self, cfg=None):
         super(FrameAvgPool, self).__init__()
-        kernel_size = 2
-        stride = 2
+        kernel_size = 8
+        stride = 8
         self.avg_pool = nn.AvgPool1d(kernel_size, stride, int(kernel_size/2))
 
     def forward(self, visual_input):

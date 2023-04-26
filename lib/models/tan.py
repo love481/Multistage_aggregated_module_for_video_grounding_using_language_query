@@ -65,18 +65,15 @@ class TAN(BaseModel):
         self.text_embedding_dropout = nn.Dropout(config.hidden_dropout_prob)
         self.visual_embedding_LayerNorm = BertLayerNorm(config.hidden_size, eps=1e-12)
         self.visual_embedding_dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.postion_encoding = pos_embedding(194,config.hidden_size)
+        # self.postion_encoding = pos_embedding(194,config.hidden_size) # for tacos
+        self.postion_encoding = pos_embedding(116, config.hidden_size) # for activity net
 
-        #iou mask map
-        self.iou_mask_map = torch.zeros(129,129).float()
-        for i in range(0,128,1):
-          self.iou_mask_map[i,1+i:min(i+17,129)] = 1.
-        for i in range(0,128-16,2):
-          self.iou_mask_map[i,range(18+i,min(33+i,129),2)] = 1.
-        for i in range(0,128-32,4):
-          self.iou_mask_map[i,range(36+i,min(65+i,129),4)] = 1.
-        for i in range(0,128-64,8):
-          self.iou_mask_map[i,range(72+i,129,8)] = 1.
+        #iou mask map for activity net
+        self.iou_mask_map = torch.zeros(33,33).float()
+        for i in range(0,32,1):
+            self.iou_mask_map[i,i+1:min(i+17,33)] = 1.
+        for i in range(0,32-16,2):
+            self.iou_mask_map[i,range(18+i,33,2)] = 1.
 
         # transformer layer
         self.tblock1 = TransformerBlock(config)
@@ -181,6 +178,7 @@ class TAN(BaseModel):
         #pass through frame layer, converts feats from 256 to 129 length
         feats = self.frame_layer(feats.transpose(1,2))
         feats = feats.transpose(1,2)
+        # print(feats.shape)
 
         attention_masks = attention_masks.unsqueeze(1).unsqueeze(2)
         ##for unpadded space and 0 for padded space i.e (1-(11110000)) 00000000 for text and visual sequence
@@ -191,6 +189,7 @@ class TAN(BaseModel):
         #project both video and text features to same dimension, 512
         feats = self.project_vid(feats)
         inps = self.project_text(inps)
+        # print(feats.shape)
         
         # pass masked tokens throuh mask_embedding
         if self.training:
@@ -223,7 +222,7 @@ class TAN(BaseModel):
         # ending_emb = self.mlp_e(feats) ##(batch_size * 129 * aggregated_units)
         feats = self.final_mlp_2(feats)
         starting_emb, ending_emb, middle_emb = torch.split(feats,self.config.hidden_size, dim=-1) 
-        
+        # print("there0")
         T = starting_emb.size(1) #129
         s_idx = torch.arange(T, device=self.device)#129
         e_idx = torch.arange(T, device=self.device)#129
@@ -235,7 +234,7 @@ class TAN(BaseModel):
         starting_score =  self.mlp_score_s(starting_emb) ##(batch_size * 129 * 1)
         middle_score = self.mlp_score_m(middle_emb)  ##(batch_size * 129 * 1)
         ending_score = self.mlp_score_e(ending_emb)  ##(batch_size * 129 * 1)
-        
+        # print("there1")
 
         assert starting_score.size() == (batch_size,feats.shape[1],1) , "starting score doesnot match"
         assert middle_score.size() == (batch_size,feats.shape[1],1) , "model score doesnot match"
@@ -249,7 +248,7 @@ class TAN(BaseModel):
         ending_score = ending_score.transpose(1,2)
         middle_score = middle_score.transpose(1,2)
         logits_visual = torch.cat((starting_score, ending_score, middle_score), 1)
-	
+        # print("ending")
         #return (batch_size, 12, self.self.vocab_size), (batch_size, 129, 1), proposals(batch_size, 2548, 3), proposals_indices(2548, 2)
         #return mlm_requirements, bce_requirements, regression_loss & match_loss 
         return token_predictions, logits_visual, logits_iou,self.iou_mask_map.clone().detach()

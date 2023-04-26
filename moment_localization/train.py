@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 from prettytable import PrettyTable
 import csv
+import wandb
+import yaml
 
 def count_parameters(model):
     table = PrettyTable(["Modules", "Parameters"])
@@ -15,7 +17,7 @@ def count_parameters(model):
         train_params+=param
     print(table)
     print(f"Total Trainable Params: {train_params}")
-from . import _init_paths
+import _init_paths
 # import _init_paths
 import os
 import pprint
@@ -102,11 +104,16 @@ if __name__ == '__main__':
     if not config.DATASET.NO_VAL:
         val_dataset = getattr(datasets, dataset_name)('val')
     test_dataset = getattr(datasets, dataset_name)('test')
-
     model = getattr(models, model_name)(config.TAN.VLBERT_MODULE.PARAMS)
+    optimizer = optim.AdamW(model.parameters(),lr=config.TRAIN.LR, betas=(0.9, 0.999), weight_decay=config.TRAIN.WEIGHT_DECAY)
+    # optimizer = optim.SGD(model.parameters(), lr=config.TRAIN.LR, momentum=0.9, weight_decay=config.TRAIN.WEIGHT_DECAY)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.TRAIN.FACTOR, patience=config.TRAIN.PATIENCE, verbose=config.VERBOSE)
+
     if config.MODEL.CHECKPOINT and config.TRAIN.CONTINUE:
-        model_checkpoint = torch.load(config.MODEL.CHECKPOINT)
+        model_checkpoint, optimizer_checkpoint, scheduler_checkpoint = torch.load(config.MODEL.CHECKPOINT)
         model.load_state_dict(model_checkpoint)
+        optimizer.load_state_dict(optimizer_checkpoint)
+        scheduler.load_state_dict(scheduler_checkpoint)
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs")
         model = torch.nn.DataParallel(model)
@@ -114,15 +121,13 @@ if __name__ == '__main__':
     model = model.to(device)
     count_parameters(model)
 
-    optimizer = optim.AdamW(model.parameters(),lr=config.TRAIN.LR, betas=(0.9, 0.999), weight_decay=config.TRAIN.WEIGHT_DECAY)
-    # optimizer = optim.SGD(model.parameters(), lr=config.TRAIN.LR, momentum=0.9, weight_decay=config.TRAIN.WEIGHT_DECAY)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.TRAIN.FACTOR, patience=config.TRAIN.PATIENCE, verbose=config.VERBOSE)
+
     if not os.path.exists("plot_folder"):
         os.mkdir("plot_folder")
     #fw=open("plot_folder/train_loss.txt",'w')
     fwa=open("plot_folder/loss_all.txt",'w')
     #writer = csv.writer(fw)
-    writer_all = csv.writer(fwa)
+    writer_all = csv.writer(fwa) 
 
 
 
@@ -161,6 +166,7 @@ if __name__ == '__main__':
         return dataloader
 
     def network(sample):
+        
         anno_idxs = sample['batch_anno_idxs']
         textual_input = sample['batch_word_vectors'].cuda()
         textual_mask = sample['batch_txt_mask'].cuda()
@@ -196,6 +202,7 @@ if __name__ == '__main__':
         state['loss_meter'] = AverageMeter()
         state['test_interval'] = int(len(train_dataset)/config.TRAIN.BATCH_SIZE*config.TEST.INTERVAL)
         #state['test_interval'] = 1
+
         state['t'] = 1
         model.train()
         if config.VERBOSE:
@@ -264,11 +271,11 @@ if __name__ == '__main__':
             if not os.path.exists(rootfolder1):
                 print('Make directory %s ...' % rootfolder1)
                 os.mkdir(rootfolder1)
-            if ((state['epoch']+1)%5==0):
+            if ((state['epoch']+1)%1==0):
                 if torch.cuda.device_count() > 1:
-                    torch.save(model.module.state_dict(), saved_model_filename)
+                    torch.save((model.module.state_dict(), optimizer.state_dict(), scheduler.state_dict()), saved_model_filename)
                 else:
-                    torch.save(model.state_dict(), saved_model_filename)
+                    torch.save((model.state_dict(), optimizer.state_dict(), scheduler.state_dict()), saved_model_filename)
 
 
             if config.VERBOSE:
@@ -289,8 +296,11 @@ if __name__ == '__main__':
         state['count'] = 0
         state['miou'] = 0
         state['annotations'] = state['iterator'].dataset.annotations
+        # print(config.VERBOSE, "hereeee")
         if config.VERBOSE:
             if state['split'] == 'train':
+                print(len(train_dataset),config.TEST.BATCH_SIZE)
+                exit()
                 state['progress_bar'] = tqdm(total=math.ceil(len(train_dataset)/config.TEST.BATCH_SIZE))
             elif state['split'] == 'val':
                 state['progress_bar'] = tqdm(total=math.ceil(len(val_dataset)/config.TEST.BATCH_SIZE))
@@ -327,6 +337,11 @@ if __name__ == '__main__':
     engine.hooks['on_test_start'] = on_test_start
     engine.hooks['on_test_forward'] = on_test_forward
     engine.hooks['on_test_end'] = on_test_end
+
+
+    with open(args.cfg, 'r') as f:
+        config_dict = yaml.safe_load(f)
+    wandb.init(project="query-grounding", config=config_dict)
     engine.train(network,
                  iterator('train'),
                  maxepoch=config.TRAIN.MAX_EPOCH,
